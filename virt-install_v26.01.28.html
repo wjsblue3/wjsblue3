@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>KVM virt-install 통합 생성기 v6</title>
+    <style>
+        :root { --primary-color: #2c3e50; --accent-color: #3498db; --success-color: #27ae60; --warning-color: #f39c12; }
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #eceff1; padding: 20px; color: #333; line-height: 1.5; }
+        .container { max-width: 1000px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); }
+        h2 { border-left: 6px solid var(--primary-color); padding-left: 15px; color: var(--primary-color); margin-bottom: 25px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-weight: bold; font-size: 0.9em; margin-bottom: 5px; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        .flex-row { display: flex; gap: 10px; }
+        .cloud-init-panel { background: #fffef0; border: 1px solid #f1e6b2; padding: 15px; border-radius: 8px; margin-top: 10px; grid-column: span 2; }
+        .result-box { margin-top: 25px; }
+        .cmd-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        textarea { width: 100%; font-family: 'Consolas', monospace; background: #1e1e1e; color: #dcdcdc; padding: 15px; border-radius: 6px; border: none; font-size: 13.5px; line-height: 1.6; resize: vertical; margin-bottom: 15px; min-height: 80px; }
+        #virt_cmd { height: 380px; }
+        .btn-copy { background: var(--success-color); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .radio-group { display: flex; gap: 20px; padding: 10px 0; }
+        .badge { font-size: 11px; background: var(--warning-color); color: white; padding: 2px 6px; border-radius: 10px; margin-left: 5px; }
+        .hint { font-size: 11px; color: #888; margin-top: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🚀 KVM virt-install 통합 생성기 v6 (Full Version)</h2>
+
+    <div class="form-grid">
+        <div class="form-group">
+            <label>가상머신 이름</label>
+            <input type="text" id="vm_name" value="Rocky9-Test" oninput="syncDiskPath(); generate();">
+            <span class="hint">* 이름 입력 시 디스크 경로 파일명이 자동 변경됩니다.</span>
+        </div>
+
+        <div class="form-group">
+            <label>OS Variant (최적화 선택)</label>
+            <select id="os_variant" onchange="onOsChange()">
+                <optgroup label="RedHat 계열">
+                    <option value="rocky9" selected>Rocky Linux 9.x</option>
+                    <option value="rocky8">Rocky Linux 8.x</option>
+                    <option value="rhel9.0">RHEL 9.x</option>
+                    <option value="rhel7">RHEL/CentOS 7.x</option>
+                    <option value="centos-stream9">CentOS Stream 9</option>
+                </optgroup>
+                <optgroup label="Debian/Ubuntu 계열">
+                    <option value="ubuntu24.04">Ubuntu 24.04 LTS</option>
+                    <option value="ubuntu22.04">Ubuntu 22.04 LTS</option>
+                    <option value="debian12">Debian 12</option>
+                </optgroup>
+                <optgroup label="Windows">
+                    <option value="win11">Windows 11</option>
+                    <option value="win10">Windows 10</option>
+                    <option value="win2k22">Windows Server 2022</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>vCPUs</label>
+            <select id="vcpus" onchange="generate()">
+                <option value="1">1</option>
+                <option value="2" selected>2</option>
+                <option value="4">4</option>
+                <option value="8">8</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>RAM 용량 선택 (MB)</label>
+            <div class="flex-row">
+                <select id="ram_preset" onchange="updateRam(this.value)" style="flex:1;">
+                    <option value="">직접입력</option>
+                    <option value="1024">1 GB</option>
+                    <option value="2048">2 GB</option>
+                    <option value="4096" selected>4 GB</option>
+                    <option value="8192">8 GB</option>
+                    <option value="16384">16 GB</option>
+                </select>
+                <input type="number" id="ram_val" value="4096" oninput="generate()" style="flex:1;">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>디스크 포맷 & 크기 (GB)</label>
+            <div class="flex-row">
+                <select id="disk_format" onchange="syncDiskPath(); generate();" style="flex:1;">
+                    <option value="qcow2" selected>qcow2</option>
+                    <option value="img">img (raw)</option>
+                    <option value="raw">raw</option>
+                    <option value="vmdk">vmdk</option>
+                </select>
+                <input type="number" id="disk_size" value="20" oninput="generate()" style="flex:1;">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>그래픽 인터페이스</label>
+            <div class="radio-group">
+                <label><input type="radio" name="graphics" value="none" checked onclick="generate()"> None (CLI)</label>
+                <label><input type="radio" name="graphics" value="vnc" onclick="generate()"> VNC (GUI)</label>
+            </div>
+        </div>
+
+        <div class="form-group full-width" style="grid-column: span 2;">
+            <label>디스크 저장 경로 (이미지 파일명 포함)</label>
+            <input type="text" id="disk_path" value="/var/lib/libvirt/images/Rocky9-Test.qcow2" oninput="manualDiskPath()">
+        </div>
+
+        <div class="form-group">
+            <label>네트워크 브릿지</label>
+            <input type="text" id="net_br" value="br0" oninput="generate()">
+        </div>
+
+        <div class="form-group">
+            <label>고정 IP 예약 <span class="badge">선택사항</span></label>
+            <input type="text" id="static_ip" placeholder="예: 192.168.122.200" oninput="generate()">
+        </div>
+
+        <div class="cloud-init-panel" id="cloud_panel">
+            <label style="color:#d35400; font-size:1.1em;"><input type="checkbox" id="use_cloud_init" onchange="generate()"> ☁️ Cloud-init 사용 (Cloud 이미지 배포)</label>
+            
+            <div id="cloud_details" style="display:none; margin-top:10px;">
+                <div class="flex-row" style="margin-bottom:10px;">
+                    <div style="flex:1;">
+                        <label>초기 사용자</label>
+                        <input type="text" id="cloud_user" value="rocky" oninput="generate()">
+                    </div>
+                    <div style="flex:1;">
+                        <label>초기 비밀번호</label>
+                        <input type="text" id="cloud_pw" value="password123!" oninput="generate()">
+                    </div>
+                </div>
+                <label>Cloud 이미지 경로/URL (OS 선택 시 자동변경)</label>
+                <input type="text" id="cloud_url" value="https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2" oninput="generate()">
+            </div>
+
+            <div id="iso_details" style="margin-top:10px;">
+                <label>ISO 설치 소스 경로</label>
+                <input type="text" id="iso_path" value="/home/wjs/Rocky-9.3-x86_64-minimal.iso" oninput="generate()">
+            </div>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="result-box">
+        <div id="ip_update_area" style="display:none;">
+            <div class="cmd-label">
+                <label>1. IP 예약 명령어 (Host OS 실행)</label>
+                <button class="btn-copy" onclick="copyText('ip_cmd')">복사</button>
+            </div>
+            <textarea id="ip_cmd" readonly style="height: 60px;"></textarea>
+        </div>
+
+        <div class="cmd-label">
+            <label>2. VM 생성 명령어 (virt-install)</label>
+            <button class="btn-copy" onclick="copyText('virt_cmd')">복사</button>
+        </div>
+        <textarea id="virt_cmd" readonly></textarea>
+    </div>
+</div>
+
+<script>
+    let isManualPath = false;
+    const cloudImages = {
+        'rocky9': 'https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2',
+        'rocky8': 'https://dl.rockylinux.org/pub/rocky/8/images/x86_64/Rocky-8-GenericCloud-Base.latest.x86_64.qcow2',
+        'ubuntu24.04': 'https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img',
+        'ubuntu22.04': 'https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img'
+    };
+
+    function updateRam(val) {
+        if(val) document.getElementById('ram_val').value = val;
+        generate();
+    }
+
+    function syncDiskPath() {
+        if (!isManualPath) {
+            const name = document.getElementById('vm_name').value || "VM_NAME";
+            const format = document.getElementById('disk_format').value;
+            document.getElementById('disk_path').value = `/var/lib/libvirt/images/${name}.${format}`;
+        }
+    }
+
+    function manualDiskPath() {
+        isManualPath = true;
+        generate();
+    }
+
+    function onOsChange() {
+        const os = document.getElementById('os_variant').value;
+        const cloudPanel = document.getElementById('cloud_panel');
+        
+        if(os.startsWith('win')) {
+            cloudPanel.style.display = 'none';
+            document.getElementById('use_cloud_init').checked = false;
+            // Windows는 VNC 강제
+            document.querySelector('input[name="graphics"][value="vnc"]').checked = true;
+        } else {
+            cloudPanel.style.display = 'block';
+            if(cloudImages[os]) document.getElementById('cloud_url').value = cloudImages[os];
+        }
+        generate();
+    }
+
+    function generate() {
+        const name = document.getElementById('vm_name').value || "VM_NAME";
+        const vcpus = document.getElementById('vcpus').value;
+        const ram = document.getElementById('ram_val').value;
+        const os = document.getElementById('os_variant').value;
+        const disk = document.getElementById('disk_path').value;
+        const format = document.getElementById('disk_format').value;
+        const size = document.getElementById('disk_size').value;
+        const br = document.getElementById('net_br').value;
+        const staticIp = document.getElementById('static_ip').value;
+        const graphics = document.querySelector('input[name="graphics"]:checked').value;
+        const isCloud = document.getElementById('use_cloud_init').checked;
+
+        document.getElementById('cloud_details').style.display = isCloud ? 'block' : 'none';
+        document.getElementById('iso_details').style.display = isCloud ? 'none' : 'block';
+
+        // 1. IP 예약 명령어
+        if(staticIp) {
+            document.getElementById('ip_update_area').style.display = 'block';
+            document.getElementById('ip_cmd').value = `virsh net-update default add ip-dhcp-host '<host mac="52:54:00:11:22:33" ip="${staticIp}"/>' --live --config`;
+        } else {
+            document.getElementById('ip_update_area').style.display = 'none';
+        }
+
+        // 2. virt-install 명령어 조립
+        let cmd = `virt-install \\\n`;
+        cmd += `--name ${name} \\\n`;
+        cmd += `--vcpus ${vcpus} \\\n`;
+        cmd += `--ram ${ram} \\\n`;
+        cmd += `--disk path=${disk},size=${size},format=${format} \\\n`;
+        
+        if(isCloud) {
+            const cUrl = document.getElementById('cloud_url').value;
+            const cUser = document.getElementById('cloud_user').value;
+            const cPw = document.getElementById('cloud_pw').value;
+            cmd += `--location ${cUrl} \\\n`;
+            cmd += `--cloud-init user-data={'user':'${cUser}','password':'${cPw}'} \\\n`;
+        } else {
+            const iso = document.getElementById('iso_path').value;
+            cmd += `--location ${iso} \\\n`;
+        }
+
+        cmd += `--os-variant ${os} \\\n`;
+        cmd += `--network bridge=${br},model=virtio${staticIp ? ',mac=52:54:00:11:22:33' : ''} \\\n`;
+        
+        if(graphics === 'vnc') {
+            cmd += `--graphics vnc,listen=0.0.0.0 \\\n`;
+        } else {
+            cmd += `--graphics none \\\n--extra-args 'console=ttyS0,115200n8 serial' \\\n`;
+        }
+        
+        cmd += `--console pty,target_type=serial`;
+
+        document.getElementById('virt_cmd').value = cmd;
+    }
+
+    function copyText(id) {
+        document.getElementById(id).select();
+        document.execCommand('copy');
+        alert('복사되었습니다!');
+    }
+
+    window.onload = generate;
+</script>
+
+</body>
+</html>
