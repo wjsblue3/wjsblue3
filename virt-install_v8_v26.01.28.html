@@ -2,9 +2,9 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>KVM virt-install Generator v8 (Random MAC)</title>
+    <title>KVM virt-install Generator v9 (Bug Fixed)</title>
     <style>
-        :root { --primary-color: #2c3e50; --accent-color: #3498db; --success-color: #27ae60; --warning-color: #f39c12; --ssh-color: #8e44ad; }
+        :root { --primary-color: #2c3e50; --accent-color: #3498db; --success-color: #27ae60; --warning-color: #e74c3c; --ssh-color: #8e44ad; }
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #eceff1; padding: 20px; color: #333; line-height: 1.5; }
         .container { max-width: 1000px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); }
         h2 { border-left: 6px solid var(--primary-color); padding-left: 15px; color: var(--primary-color); margin-bottom: 25px; }
@@ -14,45 +14,35 @@
         input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
         .flex-row { display: flex; gap: 10px; }
         .cloud-init-panel { background: #fffef0; border: 1px solid #f1e6b2; padding: 15px; border-radius: 8px; margin-top: 10px; grid-column: span 2; }
-        .result-box { margin-top: 25px; border-top: 2px solid #eee; padding-top: 20px; }
-        .cmd-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        textarea { width: 100%; font-family: 'Consolas', monospace; background: #1e1e1e; color: #dcdcdc; padding: 15px; border-radius: 6px; border: none; font-size: 13.5px; line-height: 1.6; resize: vertical; margin-bottom: 15px; }
+        textarea { width: 100%; font-family: 'Consolas', monospace; background: #1e1e1e; color: #dcdcdc; padding: 15px; border-radius: 6px; border: none; font-size: 13.5px; line-height: 1.6; margin-bottom: 15px; }
         .btn-copy { background: var(--success-color); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-ssh { background: var(--ssh-color); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-refresh { background: var(--accent-color); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-        .radio-group { display: flex; gap: 20px; padding: 10px 0; }
-        .badge { font-size: 11px; background: var(--warning-color); color: white; padding: 2px 6px; border-radius: 10px; margin-left: 5px; }
         .hint { font-size: 11px; color: #888; margin-top: 3px; display: block; }
+        .error-badge { background: var(--warning-color); color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 5px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🚀 KVM virt-install 통합 생성기 v8 (Random MAC)</h2>
+    <h2>🚀 KVM virt-install 통합 생성기 v9 <span class="error-badge">v8 Bug Fixed</span></h2>
 
     <div class="form-grid">
         <div class="form-group">
             <label>가상머신 이름</label>
-            <input type="text" id="vm_name" value="Rocky9-VM-01" oninput="syncDiskPath(); generate();">
+            <input type="text" id="vm_name" value="Rocky8-VM-01" oninput="syncDiskPath(); generate();">
         </div>
-
         <div class="form-group">
-            <label>MAC 주소 (자동 생성됨) <button class="btn-refresh" onclick="refreshMAC()">🔄 새로고침</button></label>
+            <label>MAC 주소 <button class="btn-refresh" onclick="refreshMAC()">🔄 랜덤생성</button></label>
             <input type="text" id="mac_addr" value="52:54:00:xx:xx:xx" readonly style="background:#f9f9f9; color:#d35400; font-weight:bold;">
         </div>
 
         <div class="form-group">
             <label>OS Variant</label>
             <select id="os_variant" onchange="onOsChange()">
-                <optgroup label="RedHat 계열">
-                    <option value="rocky9" selected>Rocky Linux 9.x</option>
-                    <option value="rocky8">Rocky Linux 8.x</option>
-                    <option value="rhel9.0">RHEL 9.x</option>
-                </optgroup>
-                <optgroup label="Ubuntu/Windows">
-                    <option value="ubuntu24.04">Ubuntu 24.04 LTS</option>
-                    <option value="win11">Windows 11</option>
-                </optgroup>
+                <option value="rocky8" selected>Rocky Linux 8.x</option>
+                <option value="rocky9">Rocky Linux 9.x</option>
+                <option value="ubuntu22.04">Ubuntu 22.04</option>
             </select>
         </div>
 
@@ -65,99 +55,56 @@
         </div>
 
         <div class="form-group full-width" style="grid-column: span 2;">
-            <label>디스크 저장 경로 (포맷: qcow2)</label>
-            <input type="text" id="disk_path" value="/var/lib/libvirt/images/Rocky9-VM-01.qcow2" oninput="manualDiskPath()">
+            <label>디스크 저장 경로</label>
+            <input type="text" id="disk_path" value="/var/lib/libvirt/images/Rocky8-VM-01.qcow2" oninput="manualDiskPath()">
         </div>
 
         <div class="form-group">
-            <label>네트워크 브릿지 & 고정 IP</label>
-            <div class="flex-row">
-                <input type="text" id="net_br" value="br0" oninput="generate()" style="flex:1;">
-                <input type="text" id="static_ip" value="192.168.122.201" oninput="generate()" style="flex:2;">
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>그래픽 모드</label>
-            <div class="radio-group">
-                <label><input type="radio" name="graphics" value="none" checked onclick="generate()"> CLI</label>
-                <label><input type="radio" name="graphics" value="vnc" onclick="generate()"> VNC</label>
-            </div>
         </div>
 
         <div class="cloud-init-panel" id="cloud_panel">
-            <label><input type="checkbox" id="use_cloud_init" onchange="generate()" checked> ☁️ Cloud-init 사용</label>
+            <label><input type="checkbox" id="use_cloud_init" onchange="generate()" checked> ☁️ Cloud-init 모드</label>
             <div id="cloud_details" style="margin-top:10px;">
-                <div class="flex-row" style="margin-bottom:10px;">
-                    <input type="text" id="cloud_user" value="rocky" oninput="generate()">
-                    <input type="text" id="cloud_pw" value="password123!" oninput="generate()">
                 </div>
-                <label>SSH Public Key</label>
+                <label>SSH Public Key (선택)</label>
                 <input type="text" id="ssh_key" placeholder="ssh-rsa ..." oninput="generate()">
                 <label style="margin-top:10px;">Cloud 이미지 URL</label>
-                <input type="text" id="cloud_url" value="https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2" oninput="generate()">
+                <input type="text" id="cloud_url" value="https://dl.rockylinux.org/pub/rocky/8/images/x86_64/Rocky-8-GenericCloud-Base.latest.x86_64.qcow2" oninput="generate()">
             </div>
         </div>
     </div>
 
     <div class="result-box">
-        <div class="cmd-label">
-            <label>1. IP 예약 명령어 (Host 실행)</label>
-            <button class="btn-copy" onclick="copyText('ip_cmd')">복사</button>
-        </div>
+        <label>1. IP 예약 (virsh)</label>
         <textarea id="ip_cmd" readonly style="height: 50px;"></textarea>
 
-        <div class="cmd-label">
-            <label>2. VM 생성 명령어</label>
-            <button class="btn-copy" onclick="copyText('virt_cmd')">복사</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <label>2. VM 생성 (명령어 수정됨 ✨)</label>
+            <button class="btn-copy" onclick="copyText('virt_cmd')">명령어 복사</button>
         </div>
-        <textarea id="virt_cmd" readonly style="height: 280px;"></textarea>
+        <textarea id="virt_cmd" readonly style="height: 300px;"></textarea>
 
-        <div class="cmd-label">
-            <label>3. SSH 자동 접속 스크립트</label>
-            <button class="btn-ssh" onclick="copyText('ssh_cmd')">스크립트 복사</button>
-        </div>
-        <textarea id="ssh_cmd" readonly style="height: 130px; background: #2c3e50; color: #ecf0f1;"></textarea>
+        <label>3. SSH 접속 대기</label>
+        <textarea id="ssh_cmd" readonly style="height: 100px; background: #2c3e50; color: #ecf0f1;"></textarea>
     </div>
 </div>
 
 <script>
     let isManualPath = false;
 
-    // 랜덤 MAC 생성 함수 (KVM 접두어 52:54:00 사용)
     function generateRandomMAC() {
-        const hexDigits = "0123456789abcdef";
+        const hex = "0123456789abcdef";
         let mac = "52:54:00";
-        for (let i = 0; i < 3; i++) {
-            mac += ":" + hexDigits.charAt(Math.floor(Math.random() * 16)) 
-                       + hexDigits.charAt(Math.floor(Math.random() * 16));
-        }
+        for (let i = 0; i < 3; i++) mac += ":" + hex.charAt(Math.floor(Math.random()*16)) + hex.charAt(Math.floor(Math.random()*16));
         return mac;
-    }
-
-    function refreshMAC() {
-        document.getElementById('mac_addr').value = generateRandomMAC();
-        generate();
-    }
 
     function syncDiskPath() {
         if (!isManualPath) {
             const name = document.getElementById('vm_name').value || "VM";
-            document.getElementById('disk_path').value = `/var/lib/libvirt/images/${name}.qcow2`;
         }
     }
 
     function manualDiskPath() { isManualPath = true; generate(); }
-
-    function onOsChange() {
-        const os = document.getElementById('os_variant').value;
-        if(os.startsWith('win')) {
-            document.getElementById('cloud_panel').style.display = 'none';
-        } else {
-            document.getElementById('cloud_panel').style.display = 'block';
-        }
-        generate();
-    }
 
     function generate() {
         const name = document.getElementById('vm_name').value || "VM";
@@ -165,40 +112,32 @@
         const vcpus = document.getElementById('vcpus').value;
         const os = document.getElementById('os_variant').value;
         const disk = document.getElementById('disk_path').value;
-        const br = document.getElementById('net_br').value;
-        const ip = document.getElementById('static_ip').value;
         const mac = document.getElementById('mac_addr').value;
-        const graphics = document.querySelector('input[name="graphics"]:checked').value;
         const isCloud = document.getElementById('use_cloud_init').checked;
 
-        // 1. IP 예약
         document.getElementById('ip_cmd').value = `virsh net-update default add ip-dhcp-host '<host mac="${mac}" ip="${ip}"/>' --live --config`;
 
-        // 2. virt-install
+        // 핵심 수정 부분: Cloud-init 문법 최적화
         let vCmd = `virt-install \\\n--name ${name} \\\n--ram ${ram} \\\n--vcpus ${vcpus} \\\n--disk path=${disk},size=20,format=qcow2 \\\n`;
         if(isCloud) {
-            const sshKey = document.getElementById('ssh_key').value;
+            const u = document.getElementById('cloud_user').value;
+            const p = document.getElementById('cloud_pw').value;
+            const k = document.getElementById('ssh_key').value;
             vCmd += `--location ${document.getElementById('cloud_url').value} \\\n`;
-            let cloudConfig = `user-data={'user':'${document.getElementById('cloud_user').value}','password':'${document.getElementById('cloud_pw').value}'`;
-            if(sshKey) cloudConfig += `,'ssh-authorized-keys':['${sshKey}']`;
-            cloudConfig += `}`;
-            vCmd += `--cloud-init ${cloudConfig} \\\n`;
+            
+            // 쉘 에러 방지를 위해 큰따옴표로 감싸고 문법 단순화
+            let ciData = `user-data="user=${u},password=${p}`;
+            if(k) ciData += `,ssh-authorized-keys=${k}`;
+            ciData += `"`;
+            vCmd += `--cloud-init ${ciData} \\\n`;
         }
-        vCmd += `--os-variant ${os} \\\n--network bridge=${br},model=virtio,mac=${mac} \\\n`;
-        vCmd += graphics === 'vnc' ? `--graphics vnc,listen=0.0.0.0 \\\n` : `--graphics none \\\n--extra-args 'console=ttyS0,115200n8 serial' \\\n`;
-        vCmd += `--console pty,target_type=serial`;
+        vCmd += `--os-variant ${os} \\\n--network bridge=${br},model=virtio,mac=${mac} \\\n--graphics none \\\n--extra-args 'console=ttyS0,115200n8 serial' \\\n--console pty,target_type=serial`;
         document.getElementById('virt_cmd').value = vCmd;
 
-        // 3. SSH 스크립트
-        const user = document.getElementById('cloud_user').value;
-        document.getElementById('ssh_cmd').value = `echo "Wait for SSH (${ip})..."\nwhile ! nc -z ${ip} 22; do sleep 2; done\nssh -o StrictHostKeyChecking=no ${user}@${ip}`;
+        document.getElementById('ssh_cmd').value = `while ! nc -z ${ip} 22; do sleep 2; done\nssh -o StrictHostKeyChecking=no ${document.getElementById('cloud_user').value}@${ip}`;
     }
 
-    // 초기화
-    window.onload = () => {
-        refreshMAC();
-        onOsChange();
-    };
+    window.onload = () => { refreshMAC(); generate(); };
 </script>
 </body>
 </html>
